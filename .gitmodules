@@ -1,3 +1,6 @@
 [submodule "r2p2"]
 	path = r2p2
 	url = https://github.com/epfl-dcsl/r2p2
+[submodule "raft"]
+	path = raft
+	url = https://github.com/epfl-dcsl/raft/
