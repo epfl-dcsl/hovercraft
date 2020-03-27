@@ -7,3 +7,6 @@
 [submodule "lancet-tool"]
 	path = lancet-tool
 	url = https://github.com/epfl-dcsl/lancet-tool
+[submodule "distbenchr"]
+	path = distbenchr
+	url = https://github.com/marioskogias/distbenchr/

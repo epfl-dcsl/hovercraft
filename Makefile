@@ -28,6 +28,9 @@
 # SKIP_NO_SE=1  - skip no side effect operations on all nodes but the replier
 # SWITCH_AGG=1  - hovercraft++ (support for in-network aggregation)
 
+ROOTDIR=$(shell git rev-parse --show-toplevel)
+R2P2_DIR=$(ROOTDIR)/r2p2
+
 vanilla-stss:
 	make clean-all
 	make -C raft
@@ -43,6 +46,12 @@ hovercraftplus-stss:
 	make clean-all
 	make -C raft SWITCH_AGG=1
 	make -C r2p2/dpdk-apps stss SWITCH_AGG=1 ACCELERATED=1 LB_REPLIES=1 SKIP_NO_SE=1 SMART_LB=1
+
+lancet:
+	make -C lancet-tool coordinator
+	make -C lancet-tool agents_r2p2_nic_ts R2P2=$(R2P2_DIR)/r2p2
+	make -C lancet-tool manager
+	make -C lancet-tool deploy HOSTS=icnals01,icnals02,icnals03,icnals04
 
 clean-all:
 	make -C raft clean
