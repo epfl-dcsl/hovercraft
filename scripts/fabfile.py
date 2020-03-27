@@ -11,6 +11,7 @@ env.roledefs = {
         'followers3': ['icnals17', 'icnals20'],
         'lancet-agents': ['icnals01', 'icnals02', 'icnals03', 'icnals04'],
         'coordinator': ['icnals10'],
+        'multicast': ['224.123.123.123']
         }
 
 PROJECT_DIR = "/home/kogias/hovercraft"
@@ -21,6 +22,14 @@ RES_DIR = "{}/results".format(PROJECT_DIR)
 
 def icnals_ip(servername):
     return "10.90.44.2{}".format(servername[-2:])
+
+@roles('coordinator')
+def build(program_name, flags=None):
+    run("make -C {} {} {}".format(APP_DIR, program_name, flags))
+
+@roles('coordinator')
+def build_raft(flags=""):
+    run("make -C {}/raft clean && make -C {}/raft {}".format(PROJECT_DIR, PROJECT_DIR, flags))
 
 @roles('lancet-agents')
 def prepare_clients():
@@ -75,6 +84,10 @@ def configure_peers(peers):
 def run_unrep(program_name):
     run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2".format(program_name))
 
+@run_bg('master-server')
+def run_master(program_name):
+    run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2,4".format(program_name))
+
 @run_bg('followers3')
 def run_followers3(program_name):
     run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2,4".format(program_name))
@@ -96,11 +109,3 @@ def run_lancet_sym_hw(pattern, proto, file_dst, target="master"):
             -nicTS > {}/{}".format(LANCET_DIR, proto, agents, pattern,
                     dst, RES_DIR, file_dst)
     run(cmd)
-
-@roles('coordinator')
-def build(program_name, flags=None):
-    run("make -C {} {} {}".format(APP_DIR, program_name, flags))
-
-@roles('coordinator')
-def build_raft(flags=""):
-    run("make -C {}/raft clean && make -C {}/raft {}".format(PROJECT_DIR, PROJECT_DIR, flags))

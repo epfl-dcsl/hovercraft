@@ -25,6 +25,20 @@ CFGS = {
                 ("vanilla", "")
             ]
             ),
+        "rep": (
+            [3],
+            [
+                ("vanilla", "WITH_RAFT=1")
+                ("lb_rep_skip_no_se_smart", "WITH_RAFT=1 LB_REPLIES=1 SMART_LB=1 SKIP_NO_SE=1"),
+            ]
+            ),
+        "rep_accel": (
+            [3],
+            [
+                ("vanilla", "WITH_RAFT=1 ACCELERATED=1")
+                ("lb_rep_skip_no_se_smart", "WITH_RAFT=1 ACCELERATED=1 LB_REPLIES=1 SMART_LB=1 SKIP_NO_SE=1"),
+            ]
+            )
         }
 
 FOLLOWERS_FN = {
@@ -37,10 +51,10 @@ def synthetic_time():
     program = "stss"
     service_times = [10]
     for mode, info in CFGS.iteritems():
-        if "unrep" in mode:
-            target = "master"
+        if "rep_accel" in mode:
+            target = "multicast"
         else:
-            target = "switch"
+            target = "master"
         for p in info[0]:
             for cname, cflags in info[1]:
                 execute(build, program, flags=cflags)
