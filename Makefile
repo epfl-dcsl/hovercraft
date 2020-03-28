@@ -28,6 +28,8 @@
 # SKIP_NO_SE=1  - skip no side effect operations on all nodes but the replier
 # SWITCH_AGG=1  - hovercraft++ (support for in-network aggregation)
 
+.PHONY: vanilla-stss hovercraft-stss hovercraftplus redismodule
+
 ROOTDIR=$(shell git rev-parse --show-toplevel)
 R2P2_DIR=$(ROOTDIR)/r2p2
 
@@ -53,6 +55,10 @@ lancet:
 	make -C lancet-tool manager
 	make -C lancet-tool deploy HOSTS=icnals01,icnals02,icnals03,icnals04
 
+redismodule:
+	make -C redismodule
+
 clean-all:
 	make -C raft clean
 	make -C r2p2 clean
+	make -C redismodule clean
