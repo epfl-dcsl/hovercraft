@@ -10,3 +10,6 @@
 [submodule "distbenchr"]
 	path = distbenchr
 	url = https://github.com/marioskogias/distbenchr/
+[submodule "redis"]
+	path = redis
+	url = https://github.com/epfl-dcsl/redis/
