@@ -17,6 +17,8 @@ env.roledefs = {
 PROJECT_DIR = "/home/kogias/hovercraft"
 DPDK_DIR = "{}/r2p2/dpdk".format(PROJECT_DIR)
 APP_DIR = "{}/r2p2/dpdk-apps".format(PROJECT_DIR)
+REDIS_DIR = "{}/redis".format(PROJECT_DIR)
+REDISMODULE_DIR = "{}/redismodule".format(PROJECT_DIR)
 LANCET_DIR = "{}/lancet-tool".format(PROJECT_DIR)
 RES_DIR = "{}/results".format(PROJECT_DIR)
 
@@ -31,16 +33,29 @@ def build(program_name, flags=None):
 def build_raft(flags=""):
     run("make -C {}/raft clean && make -C {}/raft {}".format(PROJECT_DIR, PROJECT_DIR, flags))
 
-@roles('lancet-agents')
-def prepare_clients():
-    run("sudo sh -c 'FREQ=`cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq` && for i in /sys/devices/system/cpu/cpu[0-9]*; do echo userspace > $i/cpufreq/scaling_governor; echo $FREQ > $i/cpufreq/scaling_setspeed; done'")
-    run("sudo ethtool -C enp65s0 adaptive-rx off adaptive-tx off rx-usecs 0 rx-frames 0 tx-usecs 0 tx-frames 0 || true")
+@roles('coordinator')
+def build_redis(flags):
+    run("make -C {} clean && make -C {} {}".format(REDIS_DIR, REDIS_DIR, flags))
+    run("make -C {}".format(REDISMODULE_DIR))
 
 @roles('master-server', 'followers3')
 def deploy(program_name):
     run("mkdir -p /tmp/{}/".format(os.getlogin()))
-    put("{}/{}".format(APP_DIR,program_name), "/tmp/{}".format(os.getlogin()))
-    run("chmod +x /tmp/kogias/{}".format(program_name))
+    put("{}/{}".format(APP_DIR, program_name), "/tmp/{}".format(os.getlogin()))
+    run("chmod +x /tmp/{}/{}".format(os.getlogin(), program_name))
+
+@roles('master-server', 'followers3')
+def deploy_redis():
+    run("mkdir -p /tmp/{}".format(os.getlogin()))
+    put("{}/src/redis-server".format(REDIS_DIR), "/tmp/{}".format(os.getlogin()))
+    run("chmod +x /tmp/{}/redis-server".format(os.getlogin()))
+    put("{}/ycsbe.so".format(REDISMODULE_DIR), "/tmp/{}".format(os.getlogin()))
+    run("chmod +x /tmp/{}/ycsbe.so".format(os.getlogin()))
+
+@roles('lancet-agents')
+def prepare_clients():
+    run("sudo sh -c 'FREQ=`cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq` && for i in /sys/devices/system/cpu/cpu[0-9]*; do echo userspace > $i/cpufreq/scaling_governor; echo $FREQ > $i/cpufreq/scaling_setspeed; done'")
+    run("sudo ethtool -C enp65s0 adaptive-rx off adaptive-tx off rx-usecs 0 rx-frames 0 tx-usecs 0 tx-frames 0 || true")
 
 def _prepare_huge_pages(hugepages):
     run('sudo sh -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"')
@@ -82,15 +97,27 @@ def configure_peers(peers):
 
 @run_bg('master-server')
 def run_unrep(program_name):
-    run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2".format(program_name))
+    run("ulimit -c unlimited && sudo /tmp/{}/{} -l 2".format(os.getlogin(), program_name))
 
 @run_bg('master-server')
 def run_master(program_name):
-    run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2,4".format(program_name))
+    run("ulimit -c unlimited && sudo /tmp/{}/{} -l 2,4".format(os.getlogin(), program_name))
 
 @run_bg('followers3')
 def run_followers3(program_name):
-    run("ulimit -c unlimited && sudo /tmp/kogias/{} -l 2,4".format(program_name))
+    run("ulimit -c unlimited && sudo /tmp/{}/{} -l 2,4".format(os.getlogin(), program_name))
+
+@run_bg('master-server')
+def run_redis_single():
+    run("ulimit -c unlimited && sudo /tmp/{}/redis-server -l 2 --  --save "" --protected-mode no --loadmodule /tmp/{}/ycsbe.so".format(os.getlogin(), os.getlogin()))
+
+@run_bg('master-server')
+def run_redis_master():
+    run("ulimit -c unlimited && sudo /tmp/{}/redis-server -l 2,4 --  --save "" --protected-mode no --loadmodule /tmp/{}/ycsbe.so".format(os.getlogin(), os.getlogin()))
+
+@run_bg('followers3')
+def run_redis_followers():
+    run("ulimit -c unlimited && sudo /tmp/{}/redis-server -l 2,4 --  --save "" --protected-mode no --loadmodule /tmp/{}/ycsbe.so".format(os.getlogin(), os.getlogin()))
 
 @run_bg('coordinator')
 def run_lancet_sym_hw(pattern, proto, file_dst, target="master"):
@@ -109,3 +136,7 @@ def run_lancet_sym_hw(pattern, proto, file_dst, target="master"):
             -nicTS > {}/{}".format(LANCET_DIR, proto, agents, pattern,
                     dst, RES_DIR, file_dst)
     run(cmd)
+
+@roles('master-server', 'followers3')
+def kill_redis():
+    run("sudo kill -9 `pidof redis-server` || true")

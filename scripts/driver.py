@@ -60,8 +60,6 @@ def synthetic_time():
                 execute(build, program, flags=cflags)
                 execute(deploy, program)
                 for s in service_times:
-                    if mode == "switch_accel":
-                        execute(run_p4)
                     mnt = Monitor()
                     if p > 0:
                         mnt.bg_execute(run_master, program, should_wait=False)
@@ -78,6 +76,34 @@ def synthetic_time():
                     mnt.monitor()
                     mnt.killall()
 
+def redis_ycsbe():
+    for mode, info in CFGS.iteritems():
+        if "accel" in mode:
+            target = "multicast"
+        else:
+            target = "master"
+        for p in info[0]:
+            for cname, cflags in info[1]:
+                execute(build, "stss", flags=cflags)
+                execute(build_redis, flags=cflags)
+                execute(kill_redis)
+                execute(deploy_redis)
+                mnt = Monitor()
+                if p > 0:
+                    mnt.bg_execute(run_redis_master, should_wait=False)
+                    time.sleep(2)
+                    mnt.bg_execute(run_redis_followers, should_wait=False)
+                    proto = "redis-ycsber"
+                else:
+                    mnt.bg_execute(run_redis_single, should_wait=False)
+                    proto = "redis-ycsbe"
+                time.sleep(60)
+                fname = "redis_ycsbe_{}_peers_{}_{}.txt".format(mode, p, cname)
+                mnt.bg_execute(run_lancet_sym_hw, PATTERNS["redis"],
+                        proto, fname, target=target, should_wait=True)
+                mnt.monitor()
+                mnt.killall()
+
 def main():
     execute(build_raft)
     execute(prepare_clients)
@@ -86,6 +112,8 @@ def main():
     print "Execute synthetic time experiment"
     synthetic_time()
 
+    print "Run redis ycsbe experiment"
+    redis_ycsbe()
 
 if __name__ == "__main__":
     os.setpgrp() # create new process group, become its leader
