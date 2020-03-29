@@ -6,7 +6,7 @@ This repository contains the code for the paper:
 > Marios Kogias, Edouard Bugnion  
 > Eurosys 2020  
 
-You can find the paper [here]()
+You can find the paper [here](https://infoscience.epfl.ch/record/276586)
 
 ## Contents
 
